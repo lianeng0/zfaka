@@ -6,7 +6,7 @@
  * Date:20180528
  */
 
-class LoginController extends PcBasicController
+class LoginController extends MemberBasicController
 {
 	private $m_user;
 	private $m_user_login_logs;
@@ -41,14 +41,19 @@ class LoginController extends PcBasicController
 			Helper::response($data);
 		}
 		$email    = $this->getPost('email',false);
-		$password = $this->getPost('password',false);
+		$password = $this->getPost('password');
+		
+		$password_string = new \Safe\MyString($password);
+		$password = $password_string->trimall()->qufuhao()->getValue();
+		
 		$csrf_token = $this->getPost('csrf_token', false);
 		
 		if($email AND $password AND $csrf_token){
 			if ($this->VerifyCsrfToken($csrf_token)) {
+				$email = strtolower($email);
 				if(isEmail($email)){
 					if(isset($this->config['yzmswitch']) AND $this->config['yzmswitch']>0){
-						$vercode = $this->getPost('vercode',false);
+						$vercode = $this->getPost('vercode');
 						if($vercode){
 							if(strtolower($this->getSession('loginCaptcha')) == strtolower($vercode)){
 								$this->unsetSession('loginCaptcha');

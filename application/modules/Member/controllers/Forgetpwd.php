@@ -6,7 +6,7 @@
  * Date:20150909
  */
 
-class ForgetpwdController extends PcBasicController
+class ForgetpwdController extends MemberBasicController
 {
 	private $m_user;
 	private $m_email_code;
@@ -49,6 +49,10 @@ class ForgetpwdController extends PcBasicController
                 $code = $key_array[0];
                 $id = (int)$key_array[1];
 				$email = $key_array[2];
+				$email = strtolower($email);
+				
+				$code_string = new \Safe\MyString($code);
+				$code = $code_string->trimall()->qufuhao2()->getValue();
 				
                 if (false != $code AND is_numeric($id) AND $id > 0 AND isEmail($email)) {
                     //从数据库中读取
@@ -84,28 +88,33 @@ class ForgetpwdController extends PcBasicController
 			$data = array('code' => 1000, 'msg' => '本系统关闭密码重置功能');
 			Helper::response($data);
 		}
-		$email = $this->getPost('email',false);
-		$code = $this->getPost('code',false);
-		$password = $this->getPost('password',false);
+		$email = $this->getPost('email');
+		$code = $this->getPost('code');
+		$password = $this->getPost('password');
 		$csrf_token = $this->getPost('csrf_token', false);
 		
 		$data = array();
 		
 		if($email AND $code AND $password AND $csrf_token){
 			if ($this->VerifyCsrfToken($csrf_token)) {
-                //从数据库中读取
-                $where = array('email' => $email, 'code' => $code, 'status' => 1,'action'=>'forgetpwd' ,'checkedStatus'=>0);
-                $email_code = $this->m_email_code->Where($where)->SelectOne();
-                if (!empty($email_code)) {
-					$change = $this->m_user->changePWD($email_code['userid'], $password);
-					if($change){
-						$data = array('code' => 1, 'msg' => 'success');
+				$email = strtolower($email);
+				if(isEmail($email)){
+					//从数据库中读取
+					$where = array('email' => $email, 'code' => $code, 'status' => 1,'action'=>'forgetpwd' ,'checkedStatus'=>0);
+					$email_code = $this->m_email_code->Where($where)->SelectOne();
+					if (!empty($email_code)) {
+						$change = $this->m_user->changePWD($email_code['userid'], $password);
+						if($change){
+							$data = array('code' => 1, 'msg' => 'success');
+						}else{
+							$data = array('code' => 1003, 'msg' => '修改失败');
+						}
+						$this->m_email_code->UpdateByID(array('checkedStatus'=>1),$email_code['id']);
 					}else{
-						$data = array('code' => 1003, 'msg' => '修改失败');
+						$data = array('code' => 1002, 'msg' => '验证失败');
 					}
-					$this->m_email_code->UpdateByID(array('checkedStatus'=>1),$email_code['id']);
-                }else{
-					$data = array('code' => 1002, 'msg' => '验证失败');
+				} else {
+					$data = array('code' => 1001, 'msg' => '邮箱账户有误!');
 				}
 			} else {
                 $data = array('code' => 1001, 'msg' => '页面超时，请刷新页面后重试!');
@@ -123,16 +132,17 @@ class ForgetpwdController extends PcBasicController
 			$data = array('code' => 1000, 'msg' => '本系统关闭密码重置功能');
 			Helper::response($data);
 		}
-		$email    = $this->getPost('email',false);
+		$email    = $this->getPost('email');
 		$csrf_token = $this->getPost('csrf_token', false);
 		
 		$data = array();
 		
 		if($email AND $csrf_token){
 			if ($this->VerifyCsrfToken($csrf_token)) {
+				$email = strtolower($email);
 				if(isEmail($email)){
 					if(isset($this->config['yzmswitch']) AND $this->config['yzmswitch']>0){
-						$vercode = $this->getPost('vercode',false);
+						$vercode = $this->getPost('vercode');
 						if($vercode){
 							if(strtolower($this->getSession('forgetpwdCaptcha')) == strtolower($vercode)){
 								$this->unsetSession('forgetpwdCaptcha');
@@ -209,7 +219,7 @@ class ForgetpwdController extends PcBasicController
 							$data = array('code' => 1002, 'msg' =>'邮箱不存在');
 						}
 				} else {
-					$data = array('code' => 1001, 'msg' => '页面超时，请刷新页面后重试!');
+					$data = array('code' => 1001, 'msg' => '邮箱账户有误!');
 				}
 			} else {
                 $data = array('code' => 1001, 'msg' => '页面超时，请刷新页面后重试!');
